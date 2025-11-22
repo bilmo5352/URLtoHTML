@@ -9,7 +9,7 @@ import logging
 from url_to_html import fetch_html, FetcherConfig
 
 # URL to fetch - change this to test different URLs
-URL = "https://www.meesho.com/search?q=kurthi"
+URL = "https://www.nykaa.com/brands/nykaa-cosmetics/c/1937?search_redirection=True"
 
 # Setup logging to see the process
 logging.basicConfig(

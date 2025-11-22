@@ -15,6 +15,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 DECODO_USERNAME = "U0000325820"
 DECODO_PASSWORD = "PW_19849a2d58cbbf2af5e39e3a38693d1ba"
 DECODO_API_ENDPOINT = "https://unblock.decodo.com:60000"
+# IMPORTANT: Decodo can only process 3 URLs concurrently at a time
+DECODO_MAX_CONCURRENT = 3
 
 logger = logging.getLogger(__name__)
 

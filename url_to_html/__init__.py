@@ -7,6 +7,8 @@ fallback strategy: static fetch → XHR fetch → JS rendering.
 
 from .fetcher import fetch_html, FetcherConfig
 from .js_renderer import JSrend
+from .async_batch_fetcher import async_fetch_batch
+from .batch_config import BatchFetcherConfig
 from .exceptions import (
     FetchError,
     BlockedError,
@@ -20,7 +22,9 @@ __version__ = "0.1.0"
 __all__ = [
     "fetch_html",
     "JSrend",
+    "async_fetch_batch",
     "FetcherConfig",
+    "BatchFetcherConfig",
     "FetchError",
     "BlockedError",
     "SkeletonContentError",
