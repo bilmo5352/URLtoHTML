@@ -16,9 +16,9 @@ from .exceptions import JSRenderError, TimeoutError
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Decodo API credentials (loaded from environment variables)
-DECODO_USERNAME = os.getenv("DECODO_USERNAME", "U0000325820")
-DECODO_PASSWORD = os.getenv("DECODO_PASSWORD", "PW_19849a2d58cbbf2af5e39e3a38693d1ba")
-DECODO_API_ENDPOINT = os.getenv("DECODO_API_ENDPOINT", "https://unblock.decodo.com:60000")
+DECODO_USERNAME = os.getenv("DECODO_USERNAME")
+DECODO_PASSWORD = os.getenv("DECODO_PASSWORD")
+DECODO_API_ENDPOINT = os.getenv("DECODO_API_ENDPOINT")
 DECODO_MAX_CONCURRENT = 3  # Decodo's hard limit
 
 logger = logging.getLogger(__name__)
