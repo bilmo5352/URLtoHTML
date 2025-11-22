@@ -7,10 +7,11 @@ import time
 import os
 from typing import List, Dict, Optional
 from .async_static_xhr_processor import AsyncStaticXHRProcessor
-from .async_custom_js_renderer import AsyncCustomJSRenderer
+from .async_multi_service_js_renderer import AsyncMultiServiceJSRenderer
 from .async_decodo_fallback import AsyncDecodoFallback
 from .result_aggregator import ResultAggregator
 from .batch_config import BatchFetcherConfig
+from .content_analyzer import ContentAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -127,26 +128,42 @@ async def async_fetch_batch(
         total_time = time.time() - start_time
         return aggregator.get_final_result(total_time)
     
-    # Phase 2: Custom JS Rendering
+    # Phase 2: Custom JS Rendering (Multi-Service)
     logger.info("=" * 80)
-    logger.info("PHASE 2: Custom JS Rendering")
+    logger.info("PHASE 2: Custom JS Rendering (Multi-Service)")
     logger.info("=" * 80)
     
-    custom_js_renderer = AsyncCustomJSRenderer(
-        api_url=config.custom_js_api_url,
+    # Use multi-service renderer for parallel processing
+    custom_js_renderer = AsyncMultiServiceJSRenderer(
+        service_endpoints=config.custom_js_service_endpoints,
         batch_size=config.custom_js_batch_size,
         cooldown_seconds=config.custom_js_cooldown_seconds,
         timeout=config.custom_js_timeout
     )
     
+    logger.info(f"Using {len(config.custom_js_service_endpoints)} services for parallel processing")
+    
     phase2_results = await custom_js_renderer.process_urls(js_urls)
     
     # Separate successful and failed URLs
+    # Also check successful results for skeleton content
     custom_js_successful = []
     decodo_urls = []
     
+    # Initialize content analyzer for skeleton detection
+    content_analyzer = ContentAnalyzer()
+    
     for result in phase2_results:
         if result["status"] == "success":
+            # Check if successful result is actually skeleton content
+            if result["html"]:
+                is_skeleton, skeleton_reason = content_analyzer.is_custom_js_skeleton(result["html"])
+                if is_skeleton:
+                    logger.info(f"Custom JS result for {result['url']} detected as skeleton: {skeleton_reason}")
+                    decodo_urls.append(result["url"])
+                    continue
+            
+            # Valid result, add to successful
             custom_js_successful.append(result)
             # Save output if configured
             if config.save_outputs and result["html"]:

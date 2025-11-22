@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: url-to-html-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Server configuration
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_WORKERS=1
+      - LOG_LEVEL=INFO
+      
+      # Default batch configuration
+      - DEFAULT_STATIC_XHR_CONCURRENCY=100
+      - DEFAULT_STATIC_XHR_TIMEOUT=30
+      - DEFAULT_CUSTOM_JS_BATCH_SIZE=20
+      - DEFAULT_CUSTOM_JS_COOLDOWN=120
+      - DEFAULT_CUSTOM_JS_TIMEOUT=300
+      - DEFAULT_DECODO_ENABLED=true
+      - DEFAULT_DECODO_TIMEOUT=180
+      
+      # Custom JS services (comma-separated list)
+      # Example: - CUSTOM_JS_SERVICES=service1.com,service2.com,service3.com
+      # - CUSTOM_JS_SERVICES=
+      
+      # Decodo credentials
+      - DECODO_USERNAME=${DECODO_USERNAME}
+      - DECODO_PASSWORD=${DECODO_PASSWORD}
+      - DECODO_API_ENDPOINT=${DECODO_API_ENDPOINT:-https://unblock.decodo.com:60000}
+      
+      # Content analyzer
+      - DEFAULT_MIN_CONTENT_LENGTH=1000
+      - DEFAULT_MIN_TEXT_LENGTH=200
+      
+      # General
+      - DEFAULT_SAVE_OUTPUTS=false
+      - DEFAULT_OUTPUT_DIR=outputs
+      - DEFAULT_ENABLE_LOGGING=true
+    volumes:
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+

@@ -135,10 +135,24 @@ async def main():
     print(f"BATCH PROCESSING TEST - {len(TEST_URLS)} URLs")
     print(f"{'='*80}\n")
     
-    # Create configuration
+    # Create configuration with all 13 services
     config = BatchFetcherConfig(
         static_xhr_concurrency=50,
-        custom_js_api_url="https://easygoing-strength-production-d985.up.railway.app/render",
+        custom_js_service_endpoints=[
+            "easygoing-strength-copy-2-copy-2-production.up.railway.app",
+            "easygoing-strength-copy-2-copy-1-production.up.railway.app",
+            "easygoing-strength-copy-copy-1-production.up.railway.app",
+            "easygoing-strength-copy-2-copy-production.up.railway.app",
+            "easygoing-strength-copy-2-production.up.railway.app",
+            "easygoing-strength-copy-production.up.railway.app",
+            "easygoing-strength-copy-1-production.up.railway.app",
+            "easygoing-strength-copy-copy-production.up.railway.app",
+            "easygoing-strength-production-d985.up.railway.app",
+            "easygoing-strength-copy-3-production.up.railway.app",
+            "easygoing-strength-copy-copy-copy-2-production.up.railway.app",
+            "easygoing-strength-copy-copy-copy-production.up.railway.app",
+            "easygoing-strength-copy-copy-copy-1-production.up.railway.app",
+        ],
         custom_js_batch_size=20,
         custom_js_cooldown_seconds=120,
         decodo_enabled=True,

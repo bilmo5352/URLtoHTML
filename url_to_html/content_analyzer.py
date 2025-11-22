@@ -3,6 +3,8 @@ Content analysis and detection for blocked or skeleton content.
 """
 
 import logging
+import json
+import re
 from bs4 import BeautifulSoup
 from typing import Optional, Tuple
 
@@ -146,6 +148,172 @@ class ContentAnalyzer:
         if len(divs) > 20 and text_length < self.min_text_length * 3:
             logger.debug(f"Many divs ({len(divs)}) but little text ({text_length})")
             return True, f"Layout-heavy, content-light ({len(divs)} divs, {text_length} chars)"
+        
+        return False, "Valid content"
+    
+    def is_custom_js_skeleton(
+        self,
+        html_content: str,
+        min_products: int = 1
+    ) -> Tuple[bool, str]:
+        """
+        Analyze HTML content from custom JS rendering to detect skeleton/empty results.
+        This is specifically designed for JS-rendered pages that may have structure
+        but no actual content (e.g., search pages with no results).
+        
+        This method does NOT affect the existing is_skeleton_content() method used
+        for static/XHR analysis.
+        
+        Args:
+            html_content: HTML content from custom JS rendering
+            min_products: Minimum number of products/items expected (default: 1)
+            
+        Returns:
+            Tuple of (is_skeleton: bool, reason: str)
+        """
+        if not html_content:
+            return True, "Empty content"
+        
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+        except Exception as e:
+            logger.warning(f"Failed to parse HTML for custom JS skeleton check: {e}")
+            return False, "Unparseable content, assuming valid"
+        
+        html_lower = html_content.lower()
+        
+        # 1. Check for "no results" messages (case-insensitive)
+        no_results_patterns = [
+            r'oops!?\s*no\s+results?\s+found',
+            r'no\s+results?\s+found',
+            r'nothing\s+found',
+            r'no\s+products?\s+found',
+            r'no\s+items?\s+found',
+            r'try\s+searching\s+for\s+something\s+else',
+            r'don\'?t\s+worry,\s+try\s+searching',
+            r'no\s+results?\s+available',
+            r'we\s+couldn\'?t\s+find',
+            r'no\s+matches?\s+found'
+        ]
+        
+        for pattern in no_results_patterns:
+            if re.search(pattern, html_lower):
+                logger.debug(f"Found 'no results' pattern: {pattern}")
+                return True, f"Found 'no results' message"
+        
+        # 2. Extract and check JSON data from script tags
+        script_tags = soup.find_all('script', type='application/json')
+        script_tags.extend(soup.find_all('script', id=re.compile(r'__NEXT_DATA__|__INITIAL_STATE__|__APP_DATA__', re.I)))
+        
+        # Also check for inline JSON in script tags
+        all_scripts = soup.find_all('script')
+        for script in all_scripts:
+            script_content = script.string or ""
+            if not script_content:
+                continue
+            
+            # Look for JSON data patterns
+            json_patterns = [
+                r'"products"\s*:\s*\[\s*\]',  # products: []
+                r'"items"\s*:\s*\[\s*\]',     # items: []
+                r'"results"\s*:\s*\[\s*\]',   # results: []
+                r'"productsCount"\s*:\s*0',    # productsCount: 0
+                r'"totalProductsCount"\s*:\s*0',  # totalProductsCount: 0
+                r'"itemCount"\s*:\s*0',        # itemCount: 0
+                r'"count"\s*:\s*0\s*,',       # count: 0
+            ]
+            
+            for pattern in json_patterns:
+                if re.search(pattern, script_content):
+                    logger.debug(f"Found empty product listing pattern: {pattern}")
+                    return True, f"Empty product listing detected"
+            
+            # Try to parse as JSON and check for empty arrays
+            try:
+                # Look for JSON objects in script content
+                json_match = re.search(r'\{[^{}]*"products"[^{}]*\}', script_content)
+                if json_match:
+                    json_str = json_match.group(0)
+                    data = json.loads(json_str)
+                    if isinstance(data, dict):
+                        # Check various product-related keys
+                        for key in ['products', 'items', 'results', 'data']:
+                            if key in data:
+                                value = data[key]
+                                if isinstance(value, list) and len(value) == 0:
+                                    return True, f"Empty {key} array in JSON data"
+                                if isinstance(value, dict):
+                                    # Check for count fields
+                                    for count_key in ['count', 'total', 'productsCount', 'itemCount', 'totalProductsCount']:
+                                        if count_key in value and value[count_key] == 0:
+                                            return True, f"Zero {count_key} in JSON data"
+            except (json.JSONDecodeError, AttributeError):
+                # Not valid JSON, continue checking
+                pass
+        
+        # 3. Check for pages with navigation/header but no product cards or listings
+        # Look for common e-commerce/product listing indicators
+        product_indicators = [
+            soup.find_all(class_=re.compile(r'product|item|listing|card', re.I)),
+            soup.find_all(id=re.compile(r'product|item|listing', re.I)),
+            soup.find_all('article'),
+            soup.find_all(attrs={'data-product-id': True}),
+            soup.find_all(attrs={'data-item-id': True}),
+        ]
+        
+        # Flatten and count unique product indicators
+        product_elements = set()
+        for indicator_list in product_indicators:
+            product_elements.update(indicator_list)
+        
+        # Check if we have navigation/header structure
+        has_navigation = (
+            len(soup.find_all(['nav', 'header'])) > 0 or
+            len(soup.find_all(class_=re.compile(r'nav|header|menu', re.I))) > 0
+        )
+        
+        # If we have navigation but no products, likely skeleton
+        if has_navigation and len(product_elements) < min_products:
+            # But check if there's substantial text content (might be a content page, not product listing)
+            text_content = soup.get_text(separator=' ', strip=True)
+            text_length = len(text_content)
+            
+            # If text is very short, it's likely skeleton
+            if text_length < 500:
+                logger.debug(f"Has navigation but no products and minimal text ({text_length} chars)")
+                return True, f"Navigation present but no products and minimal content"
+            
+            # Check for error/empty state messages in visible text
+            visible_text_lower = text_content.lower()
+            if any(phrase in visible_text_lower for phrase in ['no results', 'nothing found', 'try searching', 'oops']):
+                return True, f"Navigation present but empty state message detected"
+        
+        # 4. Check for structure-heavy, content-light pages
+        # Count structural elements vs content elements
+        structural_elements = len(soup.find_all(['div', 'nav', 'header', 'footer', 'aside']))
+        content_elements = len(soup.find_all(['article', 'section', 'main', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']))
+        
+        text_content = soup.get_text(separator=' ', strip=True)
+        text_length = len(text_content)
+        
+        # If lots of structure but little content, might be skeleton
+        if structural_elements > 50 and content_elements < 5 and text_length < 1000:
+            logger.debug(f"Structure-heavy ({structural_elements} divs) but content-light ({content_elements} content elements, {text_length} chars)")
+            return True, f"Structure-heavy but content-light page"
+        
+        # 5. Check for loading/error states in class names or IDs
+        loading_indicators = soup.find_all(class_=re.compile(r'loading|error|empty|no-results|no-results-found', re.I))
+        loading_indicators.extend(soup.find_all(id=re.compile(r'loading|error|empty|no-results', re.I)))
+        
+        if len(loading_indicators) > 0:
+            # Check if these are visible/active
+            for indicator in loading_indicators:
+                # Check if element is likely visible (not hidden)
+                style = indicator.get('style', '')
+                classes = ' '.join(indicator.get('class', []))
+                if 'display: none' not in style.lower() and 'hidden' not in classes.lower():
+                    logger.debug(f"Found visible loading/error indicator")
+                    return True, f"Visible loading/error state detected"
         
         return False, "Valid content"
     

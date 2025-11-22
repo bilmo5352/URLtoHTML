@@ -2,7 +2,7 @@
 Configuration for batch processing.
 """
 
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 
 class BatchFetcherConfig:
@@ -15,8 +15,8 @@ class BatchFetcherConfig:
         static_xhr_timeout: int = 30,
         static_xhr_headers: Optional[Dict[str, str]] = None,
         
-        # Custom JS Service
-        custom_js_api_url: str = "https://chromeworkers-copy-production.up.railway.app/render",
+        # Custom JS Service (Multi-Service)
+        custom_js_service_endpoints: Optional[List[str]] = None,
         custom_js_batch_size: int = 20,
         custom_js_cooldown_seconds: int = 120,  # 2 minutes
         custom_js_timeout: int = 300,  # 5 minutes for batch
@@ -74,8 +74,25 @@ class BatchFetcherConfig:
         self.static_xhr_timeout = static_xhr_timeout
         self.static_xhr_headers = static_xhr_headers or {}
         
-        # Custom JS Service
-        self.custom_js_api_url = custom_js_api_url
+        # Custom JS Service (Multi-Service)
+        # Default service endpoints if not provided
+        if custom_js_service_endpoints is None:
+            custom_js_service_endpoints = [
+                "easygoing-strength-copy-2-copy-2-production.up.railway.app",
+                "easygoing-strength-copy-2-copy-1-production.up.railway.app",
+                "easygoing-strength-copy-copy-1-production.up.railway.app",
+                "easygoing-strength-copy-2-copy-production.up.railway.app",
+                "easygoing-strength-copy-2-production.up.railway.app",
+                "easygoing-strength-copy-production.up.railway.app",
+                "easygoing-strength-copy-1-production.up.railway.app",
+                "easygoing-strength-copy-copy-production.up.railway.app",
+                "easygoing-strength-production-d985.up.railway.app",
+                "easygoing-strength-copy-3-production.up.railway.app",
+                "easygoing-strength-copy-copy-copy-2-production.up.railway.app",
+                "easygoing-strength-copy-copy-copy-production.up.railway.app",
+                "easygoing-strength-copy-copy-copy-1-production.up.railway.app",
+            ]
+        self.custom_js_service_endpoints = custom_js_service_endpoints
         self.custom_js_batch_size = custom_js_batch_size
         self.custom_js_cooldown_seconds = custom_js_cooldown_seconds
         self.custom_js_timeout = custom_js_timeout
