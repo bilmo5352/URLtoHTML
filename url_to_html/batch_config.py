@@ -20,6 +20,7 @@ class BatchFetcherConfig:
         custom_js_batch_size: int = 20,
         custom_js_cooldown_seconds: int = 120,  # 2 minutes
         custom_js_timeout: int = 300,  # 5 minutes for batch
+        custom_js_max_retries: int = 10,  # Max retry attempts for failed/skeleton URLs
         
         # Decodo Web Scraping API (fallback only)
         decodo_enabled: bool = True,
@@ -58,6 +59,7 @@ class BatchFetcherConfig:
             custom_js_batch_size: URLs per batch (default: 20)
             custom_js_cooldown_seconds: Cooldown between batches (default: 120)
             custom_js_timeout: Timeout for batch requests
+            custom_js_max_retries: Max retry attempts for failed/skeleton URLs (default: 10)
             
             decodo_enabled: Whether to use Decodo as fallback
             decodo_max_concurrent: Max concurrent Decodo polling requests (default: 50)
@@ -108,6 +110,7 @@ class BatchFetcherConfig:
         self.custom_js_batch_size = custom_js_batch_size
         self.custom_js_cooldown_seconds = custom_js_cooldown_seconds
         self.custom_js_timeout = custom_js_timeout
+        self.custom_js_max_retries = custom_js_max_retries
         
         # Decodo Web Scraping API
         self.decodo_enabled = decodo_enabled
