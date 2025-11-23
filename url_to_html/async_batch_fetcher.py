@@ -157,7 +157,10 @@ async def async_fetch_batch(
         if result["status"] == "success":
             # Check if successful result is actually skeleton content
             if result["html"]:
-                is_skeleton, skeleton_reason = content_analyzer.is_custom_js_skeleton(result["html"])
+                is_skeleton, skeleton_reason = content_analyzer.is_custom_js_skeleton(
+                    result["html"], 
+                    url=result["url"]
+                )
                 if is_skeleton:
                     logger.info(f"Custom JS result for {result['url']} detected as skeleton: {skeleton_reason}")
                     decodo_urls.append(result["url"])

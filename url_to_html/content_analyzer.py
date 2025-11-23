@@ -154,6 +154,7 @@ class ContentAnalyzer:
     def is_custom_js_skeleton(
         self,
         html_content: str,
+        url: str = "",
         min_products: int = 1
     ) -> Tuple[bool, str]:
         """
@@ -166,6 +167,7 @@ class ContentAnalyzer:
         
         Args:
             html_content: HTML content from custom JS rendering
+            url: URL of the page (used to skip skeleton detection for specific domains)
             min_products: Minimum number of products/items expected (default: 1)
             
         Returns:
@@ -173,6 +175,11 @@ class ContentAnalyzer:
         """
         if not html_content:
             return True, "Empty content"
+        
+        # Skip skeleton detection for Myntra URLs - accept whatever custom JS returns
+        if url and 'myntra.com' in url.lower():
+            logger.debug(f"Skipping skeleton detection for Myntra URL: {url}")
+            return False, "Myntra URL - accepting custom JS result"
         
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
