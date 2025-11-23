@@ -176,10 +176,14 @@ class ContentAnalyzer:
         if not html_content:
             return True, "Empty content"
         
-        # Skip skeleton detection for Myntra URLs - accept whatever custom JS returns
-        if url and 'myntra.com' in url.lower():
-            logger.debug(f"Skipping skeleton detection for Myntra URL: {url}")
-            return False, "Myntra URL - accepting custom JS result"
+        # Skip skeleton detection for whitelisted domains - accept whatever custom JS returns
+        whitelisted_domains = ['myntra.com', 'sangeethamobiles.com']
+        if url:
+            url_lower = url.lower()
+            for domain in whitelisted_domains:
+                if domain in url_lower:
+                    logger.debug(f"Skipping skeleton detection for whitelisted domain ({domain}): {url}")
+                    return False, f"{domain} - accepting custom JS result"
         
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
